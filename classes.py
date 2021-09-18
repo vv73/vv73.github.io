@@ -235,41 +235,41 @@ class World:
         self.horBorders.add(Border(x1, y2, x2, y2))
         self.rect = pygame.Rect(x1, y1, x2 - x1, y2 - y1)
         size = self.rect.size
-        self.pokemones = pygame.sprite.Group()
+        self.pokemons = pygame.sprite.Group()
         self.trainers = pygame.sprite.Group()
         self.dull_trainer = DullTrainer(size[0] - 100, size[1] - 100)
         self.smart_trainer = SmartTrainer(100, size[1] - 100)
-        self._generate_pokemones()
+        self._generate_pokemons()
         self._generate_trainers()
 
     def _generate_trainers(self):
         self.trainers.add(self.dull_trainer)
         self.trainers.add(self.smart_trainer)
 
-    def _generate_pokemones(self):
+    def _generate_pokemons(self):
         for _ in range(self.n_pok):
             pok_pick = random.randint(1, 4)
             if pok_pick == 1:
-                self.pokemones.add(WaterPokemon(
+                self.pokemons.add(WaterPokemon(
                     "wp", random.randint(1, World.MAX_POKEMON_ATK),
                     random.randint(1, World.MAX_POKEMON_DF),
                     random.randint(100, self.rect.right - 100), random.randint(100, self.rect.bottom - 100))
                 )
             elif pok_pick == 2:
-                self.pokemones.add(
+                self.pokemons.add(
                     FirePokemon(
                         "fp", random.randint(1, World.MAX_POKEMON_ATK),
                         random.randint(1, World.MAX_POKEMON_DF),
                         random.randint(100, self.rect.right - 100), random.randint(100, self.rect.bottom - 100))
                 )
             elif pok_pick == 3:
-                self.pokemones.add(GrassPokemon(
+                self.pokemons.add(GrassPokemon(
                     "gp", random.randint(1, World.MAX_POKEMON_ATK),
                     random.randint(1, World.MAX_POKEMON_DF),
                     random.randint(100, self.rect.right - 100), random.randint(100, self.rect.bottom - 100))
                 )
             else:
-                self.pokemones.add(ElectricPokemon(
+                self.pokemons.add(ElectricPokemon(
                     "ep", random.randint(1, World.MAX_POKEMON_ATK),
                     random.randint(1, World.MAX_POKEMON_DF),
                     self.rect.center[0], self.rect.center[1])
@@ -279,18 +279,18 @@ class World:
         self.horBorders.draw(surface)
         self.vertBorders.draw(surface)
         surface.set_clip(self.rect)
-        self.pokemones.draw(surface)
+        self.pokemons.draw(surface)
         self.trainers.draw(surface)
         surface.set_clip(None)
 
     def update(self):
-        hor_collision = pygame.sprite.groupcollide(self.pokemones, self.horBorders, False, False)
+        hor_collision = pygame.sprite.groupcollide(self.pokemons, self.horBorders, False, False)
         for p in hor_collision:
             p.vy = -p.vy
-        vert_collision = pygame.sprite.groupcollide(self.pokemones, self.vertBorders, False, False)
+        vert_collision = pygame.sprite.groupcollide(self.pokemons, self.vertBorders, False, False)
         for p in vert_collision:
             p.vx = -p.vx
-        self.pokemones.update()
+        self.pokemons.update()
         self.trainers.update()
 
     def events_handler(self):
@@ -311,9 +311,9 @@ class World:
                         self.dull_trainer.add_pokemon(caught_pokemon)
 
     def _catch_pokemon(self, pos):
-        for pokemon in self.pokemones:
+        for pokemon in self.pokemons:
             if pokemon.rect.collidepoint(pos[0], pos[1]):
-                self.pokemones.remove(pokemon)
+                self.pokemons.remove(pokemon)
                 return pokemon
 
 

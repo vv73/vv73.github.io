@@ -42,9 +42,9 @@ while running:
             running = False
         elif e.type == pygame.MOUSEBUTTONDOWN:
             if len(world.pokemons) == 0 and not battle.started():
-                world.generate_pokemones()
+                world.generate_pokemons()
             else:
-                pokemon = world.catch_pokemon(e.pos)
+                pokemon = world._catch_pokemon(e.pos)
                 if pokemon is not None:
                     trainers[ntrainer].add(pokemon)
                     ntrainer += 1
