@@ -2,12 +2,14 @@ import pygame
 import random
 import colors
 import sys
+
 from abc import ABC, abstractmethod
 from utils import draw_text
 from enum import auto, Enum
 
 PICTURES = "static"
 HIT_DELAY = 200
+SIZE = (1200, 1000)
 
 
 class PokemonStates(Enum):
@@ -21,8 +23,9 @@ class TrainerStates(Enum):
 
 
 class BattleStates(Enum):
-    NOT_STARTED = -1
-    STARTED = 0
+    NOT_STARTED = auto()
+    STARTED = auto()
+    FINISHED = auto()
 
 
 class Pokemon(pygame.sprite.Sprite, ABC):
@@ -46,12 +49,11 @@ class Pokemon(pygame.sprite.Sprite, ABC):
 
     def update(self):
         if self.state == PokemonStates.WILD:
-            # передвижение
             self.y += self.vy
             self.x -= self.vx
 
         elif self.state == PokemonStates.CAUGHT:
-            # сидит около тренера
+            # TODO сидит около тренера
             pass
         self.image.fill((255, 255, 255, 0))
         self.rect.center = (self.x, self.y)
@@ -205,7 +207,7 @@ class SmartTrainer(Trainer):
 
     def best_team(self, n):
         # TODO
-        pass
+        return self.box[:n]
 
 
 class Border(pygame.sprite.Sprite):
@@ -293,7 +295,7 @@ class World:
         self.pokemons.update()
         self.trainers.update()
 
-    def events_handler(self):
+    def events_handler(self, surface, battle, world):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -310,11 +312,30 @@ class World:
                     else:
                         self.dull_trainer.add_pokemon(caught_pokemon)
 
+            elif event.type == pygame.KEYDOWN:
+                pressed = pygame.key.get_pressed()
+                if pressed[pygame.K_b]:
+                    if len(self.smart_trainer.box) < 6:
+                        draw_text(surface, colors.RED, "Too few poks", where=(30, SIZE[1] - 150), font_size=18)
+                    elif len(self.dull_trainer.box) < 6:
+                        draw_text(surface, colors.RED, "Too few poks", where=(SIZE[0] - 180, SIZE[1] - 150),
+                                  font_size=18)
+                    else:
+                        battle.start(world)
+
     def _catch_pokemon(self, pos):
         for pokemon in self.pokemons:
             if pokemon.rect.collidepoint(pos[0], pos[1]):
                 self.pokemons.remove(pokemon)
                 return pokemon
+
+    @property
+    def smart_trainer(self):
+        return self._smart_trainer
+
+    @smart_trainer.setter
+    def smart_trainer(self, value):
+        self._smart_trainer = value
 
 
 class Battle:
@@ -328,40 +349,44 @@ class Battle:
     def draw(self, surface):
         if self.state == BattleStates.NOT_STARTED:
             return
-        self.team1.draw(surface)
-        self.team2.draw(surface)
-        if len(self.team1.sprites()) > 0 and len(self.team2.sprites()) > 0:
-            pygame.draw.line(surface, (255, 0, 0), self.team1.sprites()[0].rect.midright,
-                             self.team2.sprites()[0].rect.midleft, 3)
+        self.smart_trainer_g.draw(surface)
+        self.dull_trainer_g.draw(surface)
+        if len(self.smart_trainer_g.sprites()) > 0 and len(self.dull_trainer_g.sprites()) > 0:
+            pygame.draw.line(surface, (255, 0, 0), self.smart_trainer_g.sprites()[0].rect.midright,
+                             self.dull_trainer_g.sprites()[0].rect.midleft, 3)
 
-            hit_circle = pygame.Surface((self.team1.sprites()[0].rect.width, self.team1.sprites()[0].rect.height),
+            hit_circle = pygame.Surface((self.smart_trainer_g.sprites()[0].rect.width, self.smart_trainer_g.sprites()[0].rect.height),
                                         pygame.SRCALPHA)
             pygame.draw.circle(hit_circle, (255, 0, 0, 100), hit_circle.get_rect().center,
                                hit_circle.get_rect().width // 2 - 5, 0)
 
             if self.turn == 1:
-                surface.blit(hit_circle, self.team2.sprites()[0].rect.topleft)
+                surface.blit(hit_circle, self.dull_trainer_g.sprites()[0].rect.topleft)
             else:
-                surface.blit(hit_circle, self.team1.sprites()[0].rect.topleft)
+                surface.blit(hit_circle, self.smart_trainer_g.sprites()[0].rect.topleft)
 
-    def start(self, trainer1, trainer2):
+    def start(self, world):
         if self.state == BattleStates.NOT_STARTED:
-            self.trainer1 = trainer1
-            self.trainer2 = trainer2
-            self.team1 = pygame.sprite.Group()
-            self.team1.add(trainer1.best_team(self.n))
-            self.team2 = pygame.sprite.Group()
-            self.team2.add(trainer2.best_team(self.n))
-            if len(self.team1) < self.n or len(self.team2) < self.n:
-                return
+            pygame.mixer.music.load(f"{PICTURES}/115-battle.ogg")
+            pygame.mixer.music.play(-1)
+            pygame.display.set_caption("Pokemons by arsikurin [BATTLE]")
+            world.pokemons.empty()
+            self.smart_trainer = world.smart_trainer
+            self.dull_trainer = world.dull_trainer
+            self.smart_trainer_g = pygame.sprite.Group()
+            self.smart_trainer_g.add(world.smart_trainer.best_team(self.n))
+            self.dull_trainer_g = pygame.sprite.Group()
+            self.dull_trainer_g.add(world.dull_trainer.best_team(self.n))
+            # if len(self.smart_trainer_g) < self.n or len(self.dull_trainer_g) < self.n:
+            #     return
 
             y = self.y
-            for pokemon in self.team1:
+            for pokemon in self.smart_trainer_g:
                 pokemon.rect.topleft = (self.x, y)
                 y += pokemon.rect.height + 10
                 pokemon.vx = pokemon.vy = 0
             y = self.y
-            for pokemon in self.team2:
+            for pokemon in self.dull_trainer_g:
                 pokemon.rect.topleft = (self.x + 280, y)
                 y += pokemon.rect.height + 10
                 pokemon.vx = pokemon.vy = 0
@@ -375,35 +400,38 @@ class Battle:
                 self.last_update = now_time
             else:
                 return
-            if self.turn == 1 and len(self.team1.sprites()) > 0 and len(self.team2.sprites()) > 0:
-                self.team1.sprites()[0].attack(self.team2.sprites()[0])
-                if self.team2.sprites()[0].hp <= 0:
-                    self.team2.remove(self.team2.sprites()[0])
-                if len(self.team2.sprites()) == 0:
+            if self.turn == 1 and len(self.smart_trainer_g.sprites()) > 0 and len(self.dull_trainer_g.sprites()) > 0:
+                self.smart_trainer_g.sprites()[0].attack(self.dull_trainer_g.sprites()[0])
+                if self.dull_trainer_g.sprites()[0].hp <= 0:
+                    self.dull_trainer_g.remove(self.dull_trainer_g.sprites()[0])
+                if len(self.dull_trainer_g.sprites()) == 0:
                     return self.finish(1)
-            elif self.turn == 2 and len(self.team1.sprites()) > 0 and len(self.team2.sprites()) > 0:
-                self.team2.sprites()[0].attack(self.team1.sprites()[0])
-                if self.team1.sprites()[0].hp <= 0:
-                    self.team1.remove(self.team1.sprites()[0])
-                if len(self.team1.sprites()) == 0:
+            elif self.turn == 2 and len(self.smart_trainer_g.sprites()) > 0 and len(self.dull_trainer_g.sprites()) > 0:
+                self.dull_trainer_g.sprites()[0].attack(self.smart_trainer_g.sprites()[0])
+                if self.smart_trainer_g.sprites()[0].hp <= 0:
+                    self.smart_trainer_g.remove(self.smart_trainer_g.sprites()[0])
+                if len(self.smart_trainer_g.sprites()) == 0:
                     return self.finish(2)
             if self.turn == 1:
                 self.turn = 2
             else:
                 self.turn = 1
-            self.team1.update()
-            self.team2.update()
+            self.smart_trainer_g.update()
+            self.dull_trainer_g.update()
 
     def finish(self, result):
-        self.state = BattleStates.NOT_STARTED
-        for p in self.team1:
-            self.trainer1.add(p)
-        for p in self.team2:
-            self.trainer2.add(p)
+        self.state = BattleStates.FINISHED
+        for p in self.smart_trainer_g:
+            self.smart_trainer.add_pokemon(p)
+        for p in self.dull_trainer_g:
+            self.dull_trainer.add_pokemon(p)
         if result == 1:
-            self.trainer1.wins += 1
+            self.smart_trainer.wins += 1
         else:
-            self.trainer2.wins += 1
+            self.dull_trainer.wins += 1
 
-    def started(self):
-        return True if self.state == BattleStates.STARTED else False
+    def is_started(self):
+        return self.state == BattleStates.STARTED
+
+    def is_finished(self):
+        return self.state == BattleStates.FINISHED

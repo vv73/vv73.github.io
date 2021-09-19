@@ -1,75 +1,51 @@
-from os import environ
-
-environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
-import pygame
 import colors
+import pygame
 import sys
 
-from classes import (
-    World
-)
+from utils import draw_text
+from classes import World, PICTURES, Battle, SIZE
 
 FPS = 60
-SIZE = (1200, 1000)
 pygame.init()
-screen = pygame.display.set_mode(SIZE)
 pygame.mixer.init()
-pygame.display.set_caption("Pokemons by arsikurin")
+pygame.font.init()
+pygame.mixer.music.load(f"{PICTURES}/105-recruiting.ogg")
+pygame.mixer.music.play(-1)
+screen = pygame.display.set_mode(SIZE)
+pygame.display.set_caption("Pokemons by arsikurin [RECRUITING]")
 clock = pygame.time.Clock()
-world = World(20, 0, 0, 1199, 799)
-
+world = World(20, 0, 0, SIZE[0] - 1, SIZE[1] - 201)
+battle = Battle(5, 10, 120)
 try:
     while True:
-        world.events_handler()
         screen.fill(colors.BLACK)
         world.draw(screen)
+        battle.draw(screen)
         world.update()
+        battle.update()
+        draw_text(
+            screen, colors.YELLOW, "Press B key to start the battle!", where=(SIZE[0] // 3, SIZE[1] - 150), font_size=26
+        )
+        world.events_handler(screen, battle, world)
         pygame.display.flip()
         clock.tick(FPS)
+        if len(world.pokemons) == 0:
+            battle.start(world)
+        if battle.is_finished():
+            break
 except KeyboardInterrupt:
     pygame.quit()
     sys.exit()
 
-# Сражаются команды по N покемонов
-battle = Battle(5, 10, 120)
+pygame.mixer.music.load(f"{PICTURES}/116-victory.ogg")
+pygame.mixer.music.play(-1)
+pygame.display.set_caption("Pokemons by arsikurin [FINISHED]")
+screen.fill(colors.BLACK)
+if battle.smart_trainer.wins:
+    draw_text(screen, colors.GREEN, "Smart trainer won!", where=(SIZE[0] // 2 - 150, SIZE[1] // 2), font_size=40)
+else:
+    draw_text(screen, colors.GREEN, "Dull trainer won!", where=(SIZE[0] // 2 - 150, SIZE[1] // 2), font_size=40)
+pygame.display.flip()
 
-# Цикл игры
-running = True
-ntrainer = 0
-while running:
-    for e in pygame.event.get():
-        if e.type == pygame.QUIT:
-            running = False
-        elif e.type == pygame.MOUSEBUTTONDOWN:
-            if len(world.pokemons) == 0 and not battle.started():
-                world.generate_pokemons()
-            else:
-                pokemon = world._catch_pokemon(e.pos)
-                if pokemon is not None:
-                    trainers[ntrainer].add(pokemon)
-                    ntrainer += 1
-                    ntrainer %= len(trainers)
-        elif e.type == pygame.KEYDOWN:
-            if e.key == pygame.K_SPACE:
-                pass
-
-    # Рендеринг
-    screen.fill((0, 0, 0))
-    world.draw(screen)
-    trainers_g.draw(screen)
-    battle.draw(screen)
-
-    # После отрисовки всего, переворачиваем экран
-
-    pygame.display.flip()
-    clock.tick(FPS)
-
-    # Обновление
-    world.update()
-    battle.update()
-    trainers_g.update()
-
-    if len(world.pokemons) == 0:
-        battle.start(trainers[0], trainers[1])
-
-pygame.quit()
+while True:
+    world.events_handler(screen, battle, world)

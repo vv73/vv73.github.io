@@ -1,3 +1,7 @@
+from os import environ
+
+environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
+
 BLACK = (0, 0, 0)
 GRAY = (127, 127, 127)
 WHITE = (255, 255, 255)
