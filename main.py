@@ -3,7 +3,12 @@ import pygame
 import sys
 
 from utils import draw_text
-from classes import World, PICTURES, Battle, SIZE
+from classes import (
+    World,
+    PICTURES,
+    Battle,
+    SIZE
+)
 
 FPS = 60
 pygame.init()
@@ -15,7 +20,7 @@ screen = pygame.display.set_mode(SIZE)
 pygame.display.set_caption("Pokemons by arsikurin [RECRUITING]")
 clock = pygame.time.Clock()
 world = World(20, 0, 0, SIZE[0] - 1, SIZE[1] - 201)
-battle = Battle(5, 10, 120)
+battle = Battle(4, 10, 120)
 try:
     while True:
         screen.fill(colors.BLACK)
@@ -23,9 +28,10 @@ try:
         battle.draw(screen)
         world.update()
         battle.update()
-        draw_text(
-            screen, colors.YELLOW, "Press B key to start the battle!", where=(SIZE[0] // 3, SIZE[1] - 150), font_size=26
-        )
+        if not battle.is_started() and not battle.is_finished():
+            draw_text(
+                screen, colors.YELLOW, "Press B key to start the battle!", where=(SIZE[0] // 3, SIZE[1] - 150), font_size=26
+            )
         world.events_handler(screen, battle, world)
         pygame.display.flip()
         clock.tick(FPS)

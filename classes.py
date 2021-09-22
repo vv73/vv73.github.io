@@ -79,6 +79,14 @@ class Pokemon(pygame.sprite.Sprite, ABC):
             other.hp -= 1
 
     @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, value):
+        self._state = value
+
+    @property
     def name(self):
         return self._name
 
@@ -111,6 +119,22 @@ class Pokemon(pygame.sprite.Sprite, ABC):
     @df.setter
     def df(self, value):
         self._df = value
+
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, value):
+        self._x = value
+
+    @property
+    def y(self):
+        return self._y
+
+    @y.setter
+    def y(self, value):
+        self._y = value
 
 
 class WaterPokemon(Pokemon):
@@ -304,7 +328,7 @@ class World:
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 left, mid, right = pygame.mouse.get_pressed(3)
                 if mid:
-                    break
+                    continue
                 caught_pokemon = self._catch_pokemon(pygame.mouse.get_pos())
                 if caught_pokemon is not None:
                     if left:
@@ -315,9 +339,9 @@ class World:
             elif event.type == pygame.KEYDOWN:
                 pressed = pygame.key.get_pressed()
                 if pressed[pygame.K_b]:
-                    if len(self.smart_trainer.box) < 6:
+                    if len(self.smart_trainer.box) < 4:
                         draw_text(surface, colors.RED, "Too few poks", where=(30, SIZE[1] - 150), font_size=18)
-                    elif len(self.dull_trainer.box) < 6:
+                    elif len(self.dull_trainer.box) < 4:
                         draw_text(surface, colors.RED, "Too few poks", where=(SIZE[0] - 180, SIZE[1] - 150),
                                   font_size=18)
                     else:
@@ -355,8 +379,9 @@ class Battle:
             pygame.draw.line(surface, (255, 0, 0), self.smart_trainer_g.sprites()[0].rect.midright,
                              self.dull_trainer_g.sprites()[0].rect.midleft, 3)
 
-            hit_circle = pygame.Surface((self.smart_trainer_g.sprites()[0].rect.width, self.smart_trainer_g.sprites()[0].rect.height),
-                                        pygame.SRCALPHA)
+            hit_circle = pygame.Surface(
+                (self.smart_trainer_g.sprites()[0].rect.width, self.smart_trainer_g.sprites()[0].rect.height),
+                pygame.SRCALPHA)
             pygame.draw.circle(hit_circle, (255, 0, 0, 100), hit_circle.get_rect().center,
                                hit_circle.get_rect().width // 2 - 5, 0)
 
@@ -382,11 +407,21 @@ class Battle:
 
             y = self.y
             for pokemon in self.smart_trainer_g:
+                pokemon.state = PokemonStates.CAUGHT
+                pokemon.atk = pokemon.atk * 3
+                pokemon._picture = pygame.transform.scale(pokemon._picture, (90, 90))
+                pokemon.x = self.x + 500
+                pokemon.y = y
                 pokemon.rect.topleft = (self.x, y)
                 y += pokemon.rect.height + 10
                 pokemon.vx = pokemon.vy = 0
             y = self.y
             for pokemon in self.dull_trainer_g:
+                pokemon.state = PokemonStates.CAUGHT
+                pokemon.atk = pokemon.atk * 3
+                pokemon._picture = pygame.transform.scale(pokemon._picture, (90, 90))
+                pokemon.x = self.x + 780
+                pokemon.y = y
                 pokemon.rect.topleft = (self.x + 280, y)
                 y += pokemon.rect.height + 10
                 pokemon.vx = pokemon.vy = 0
