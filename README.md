@@ -4,4 +4,4 @@
 
 
 #### to finish
-CTRL + C (CMD + C) or press the X sign
+CTRL + C or press the X sign
